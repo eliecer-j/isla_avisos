@@ -31,6 +31,9 @@ DEFAULTS: Dict[str, Any] = {
     "message_template": DEFAULT_TEMPLATE,
     # Anticipaciones en dias (15 dias, 1 semana, 2 dias por defecto)
     "reminders_days": [15, 7, 2],
+    # Si el Excel no trae la fecha de notificacion, se calcula sola: el
+    # vencimiento menos estos dias. 0 = no generar ese aviso.
+    "notify_offset_days": 15,
     # Aviso extra cuando falten pocos minutos
     "imminent_minutes": 30,
     # No mostrar lo que ya vencio (solo genera ruido)
@@ -47,6 +50,8 @@ DEFAULTS: Dict[str, Any] = {
     "check_interval_seconds": 30,
     # Segundos que la isla se queda abierta sola tras un aviso
     "expand_seconds": 8,
+    # Segundos que se queda abierta despues de quitar el raton de encima
+    "collapse_after_hover_seconds": 15,
     "sound_enabled": True,
     "paused": False,
     "first_run_done": False,

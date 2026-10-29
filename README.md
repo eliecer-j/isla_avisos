@@ -76,7 +76,7 @@ pueden variar. Columnas reconocidas:
 | Tarea                 | Sí            | Nombre / título (p. ej. el empleado)                          |
 | Fecha                 | Sí            | Vencimiento: celda de fecha, `dd/mm/aaaa`, `aaaa-mm-dd` o escrita a mano en español (`11 de diciembre de 2025`) |
 | Detalle               | No            | Tipo de contrato, área, categoría… (sale en el aviso)          |
-| Fecha de notificación | No            | Genera un **aviso extra** ese día (ver abajo)                 |
+| Fecha de notificación | No            | Genera un **aviso extra** ese día (si falta, se calcula sola: ver abajo) |
 | Hora                  | No            | `HH:MM` (si falta, se asume fin del día)                      |
 | Notas                 | No            | Texto libre (p. ej. la vigencia del contrato)                  |
 | Prioridad             | No            | Baja / Media / Alta / Crítica                                 |
@@ -91,7 +91,7 @@ pasadas no aparecen ni generan avisos.
 
 ### Fecha de notificación (segundo aviso)
 
-Si mapeas esta columna, cada contrato produce **dos avisos** independientes:
+Cada contrato produce **dos avisos** independientes:
 
 - **Vencimiento del contrato**, cuando se acerca la fecha de vencimiento:
   `JUAN PÉREZ · PRODUCCION · 5 MESES: vence contrato el 30/10/2026 (en 2 días)`
@@ -100,8 +100,24 @@ Si mapeas esta columna, cada contrato produce **dos avisos** independientes:
 
 Cada uno usa las mismas anticipaciones (15 / 7 / 2 días por defecto) y se
 descarta o pospone por separado, así que avisar de uno no silencia al otro.
-Si dejas la columna en `(ninguna)`, solo existe el aviso de vencimiento.
 Las fechas de notificación ya pasadas se ocultan igual que las de vencimiento.
+
+**La columna es opcional.** Si el Excel no la trae (o la celda de una fila está
+vacía o en `N/A`), la app **calcula sola** la fecha de notificación: el
+vencimiento menos los días que pongas en *Configuración → Notificar al empleado*
+(15 por defecto, `0` para desactivarlo). Así, con un Excel que solo tenga la
+columna de vencimiento, un contrato que vence el 30/11/2026 genera:
+
+```
+notificar vencimiento el 15/11/2026 (en 15 días)
+vence contrato el 30/11/2026 (en 30 días)
+```
+
+Si la columna existe y la celda tiene fecha, **manda la celda**; el cálculo solo
+rellena los huecos.
+
+> Las anticipaciones se cuentan por **días naturales**: "15 días" avisa el día 15,
+> no el 14 por la mañana.
 
 ---
 
@@ -113,7 +129,9 @@ Las fechas de notificación ya pasadas se ocultan igual que las de vencimiento.
   bandeja). Para que vuelva: clic derecho en la bandeja → *Mostrar isla*, o doble
   clic en el icono. Si hay un aviso nuevo, la isla reaparece sola.
 - **Arrastrar**: mover la isla (se recuerda la posición).
-- **Hover**: mantiene la isla abierta.
+- **Hover**: mantiene la isla abierta. Al quitar el ratón se pliega tras el tiempo
+  de *Tiempo tras quitar el ratón* (15 s por defecto); si no la tocas, se pliega
+  sola tras *Tiempo abierta tras aviso* (8 s por defecto).
 - La altura al expandirse se ajusta al número de tareas (sin cajas vacías).
 - **Aspecto**: negro opaco, como la Dynamic Island real (nada de transparencias) y
   con los colores del sistema iOS en modo oscuro. Al abrir se expande en 0,4 s con

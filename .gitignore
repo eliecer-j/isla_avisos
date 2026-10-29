@@ -1,2 +1,5 @@
 .venv/
 dist/
+__pycache__/*
+tools/__pycache__/*
+app/__pycache__/*

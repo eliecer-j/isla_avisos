@@ -341,6 +341,10 @@ class ExcelSource:
 
         header_row = int(self.config.get("header_row", 1) or 1)
         ignore_expired = bool(self.config.get("ignore_expired", True))
+        try:
+            notify_offset = int(self.config.get("notify_offset_days", 15) or 0)
+        except (TypeError, ValueError):
+            notify_offset = 15
         today = date.today()
         wb, ws = self._open()
         try:
@@ -411,22 +415,27 @@ class ExcelSource:
                 )
 
                 # Aviso extra: la fecha en la que hay que notificar al empleado.
+                # Si el Excel no trae esa columna (o la celda esta vacia), se
+                # calcula sola: el vencimiento menos `notify_offset_days`.
+                notify_date = None
                 if "notify_date" in columns and columns["notify_date"] < len(row):
                     notify_date = parse_date(row[columns["notify_date"]])
-                    if (notify_date is not None and notify_date != due_date
-                            and not (ignore_expired and notify_date < today)):
-                        tasks.append(
-                            Task(
-                                title=title,
-                                due_date=notify_date,
-                                notes=notes,
-                                priority=priority,
-                                done=done,
-                                source_row=row_number,
-                                detail=detail,
-                                action="notificar",
-                            )
+                if notify_date is None and notify_offset > 0:
+                    notify_date = due_date - timedelta(days=notify_offset)
+                if (notify_date is not None and notify_date != due_date
+                        and not (ignore_expired and notify_date < today)):
+                    tasks.append(
+                        Task(
+                            title=title,
+                            due_date=notify_date,
+                            notes=notes,
+                            priority=priority,
+                            done=done,
+                            source_row=row_number,
+                            detail=detail,
+                            action="notificar",
                         )
+                    )
         finally:
             wb.close()
 

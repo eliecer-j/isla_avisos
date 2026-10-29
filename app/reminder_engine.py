@@ -261,7 +261,13 @@ class ReminderEngine(QObject):
             key = "due"
             reason = reason_text(task, "overdue", humanize((now - due_at).total_seconds()))
         else:
-            applicable = [lead for lead in leads if now >= due_at - timedelta(days=lead)]
+            # El umbral se cuenta por dias naturales: "15 dias antes" es el dia
+            # 15, no las 23:59 del dia 16 (si no, el aviso saldria al dia
+            # siguiente, a las 08:00, hablando de "14 dias").
+            hoy = now.date()
+            applicable = [
+                lead for lead in leads if hoy >= task.due_date - timedelta(days=lead)
+            ]
             if not applicable:
                 return None
             imminent = min(applicable)

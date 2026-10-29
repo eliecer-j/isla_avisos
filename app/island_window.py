@@ -527,6 +527,14 @@ class IslandWindow(QWidget):
     def _seconds(self) -> int:
         return max(3, int(self.config.get("expand_seconds", 8) or 8)) * 1000
 
+    def _hover_seconds(self) -> int:
+        raw = self.config.get("collapse_after_hover_seconds", 15)
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            value = 15
+        return max(1, value) * 1000
+
     # ------------------------------------------------------------------ pintado
     def _elide(self, text: str, limit: int = 34) -> str:
         return text if len(text) <= limit else text[: limit - 1] + "..."
@@ -665,7 +673,7 @@ class IslandWindow(QWidget):
 
     def leaveEvent(self, event) -> None:  # noqa: N802 (API Qt)
         if self._expanded:
-            self._retract_timer.start(3000)
+            self._retract_timer.start(self._hover_seconds())
         super().leaveEvent(event)
 
     def mousePressEvent(self, event) -> None:  # noqa: N802 (API Qt)

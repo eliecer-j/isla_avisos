@@ -21,7 +21,7 @@ _MAPPING_FIELDS = [
     ("title", "Columna de Tarea / Nombre *"),
     ("detail", "Columna de Detalle (tipo de contrato)"),
     ("date", "Columna de Fecha *"),
-    ("notify_date", "Columna de Fecha de notificación"),
+    ("notify_date", "Columna de Fecha de notificación (si falta, se calcula)"),
     ("time", "Columna de Hora"),
     ("notes", "Columna de Notas"),
     ("priority", "Columna de Prioridad"),
@@ -225,11 +225,33 @@ class ConfigDialog(QDialog):
         self.imminent_spin.setValue(int(self.config.get("imminent_minutes", 30) or 0))
         form.addRow("Aviso extra antes de vencer:", self.imminent_spin)
 
+        self.notify_offset_spin = QSpinBox()
+        self.notify_offset_spin.setRange(0, 365)
+        self.notify_offset_spin.setSpecialValueText("Sin aviso de notificación")
+        self.notify_offset_spin.setSuffix(" días antes de vencer")
+        self.notify_offset_spin.setValue(int(self.config.get("notify_offset_days", 15) or 0))
+        self.notify_offset_spin.setToolTip(
+            "Si el Excel no trae la fecha de notificación (o la celda está vacía),\n"
+            "se calcula sola como el vencimiento menos estos días."
+        )
+        self.notify_offset_spin.valueChanged.connect(self._update_preview)
+        form.addRow("Notificar al empleado:", self.notify_offset_spin)
+
         self.expand_spin = QSpinBox()
         self.expand_spin.setRange(3, 120)
         self.expand_spin.setSuffix(" s")
         self.expand_spin.setValue(int(self.config.get("expand_seconds", 8) or 8))
         form.addRow("Tiempo abierta tras aviso:", self.expand_spin)
+
+        self.hover_spin = QSpinBox()
+        self.hover_spin.setRange(1, 300)
+        self.hover_spin.setSuffix(" s")
+        self.hover_spin.setValue(int(self.config.get("collapse_after_hover_seconds", 15) or 15))
+        self.hover_spin.setToolTip(
+            "Tiempo que la isla sigue abierta después de quitar el ratón\n"
+            "de encima (mientras el ratón está dentro, no se cierra)."
+        )
+        form.addRow("Tiempo tras quitar el ratón:", self.hover_spin)
 
         self.snooze_spin = QSpinBox()
         self.snooze_spin.setRange(5, 480)
@@ -312,7 +334,7 @@ class ConfigDialog(QDialog):
     def _sample_task(self) -> Task:
         return Task(
             title="ROMERO ALDANA SANTIAGO",
-            due_date=date.today() + timedelta(days=15),
+            due_date=date.today() + timedelta(days=30),
             detail="PRODUCCION",
             priority=Priority.MEDIUM,
             notes="5 MESES",
@@ -321,7 +343,7 @@ class ConfigDialog(QDialog):
     def _sample_notify_task(self) -> Task:
         return Task(
             title="ROMERO ALDANA SANTIAGO",
-            due_date=date.today() + timedelta(days=44),
+            due_date=date.today() + timedelta(days=15),
             detail="PRODUCCION",
             priority=Priority.MEDIUM,
             notes="5 MESES",
@@ -331,14 +353,17 @@ class ConfigDialog(QDialog):
     def _update_preview(self) -> None:
         template = self.template_edit.text()
         sample = self._sample_task()
-        lines = [format_message(template, sample, reason_text(sample, "days", "15"))]
-        # Si hay columna de notificacion, se muestra tambien ese segundo aviso.
-        if self.mapping_combos.get("notify_date") is not None and \
-                self.mapping_combos["notify_date"].currentData():
+        lines = [format_message(template, sample, reason_text(sample, "days", "30"))]
+        # El segundo aviso existe si hay columna de notificacion o si la app lo
+        # calcula sola (vencimiento menos N dias).
+        columna = self.mapping_combos.get("notify_date")
+        offset_spin = getattr(self, "notify_offset_spin", None)
+        hay_notificacion = bool(columna and columna.currentData()) or bool(
+            offset_spin is not None and offset_spin.value() > 0
+        )
+        if hay_notificacion:
             notify = self._sample_notify_task()
-            lines.append(
-                format_message(template, notify, reason_text(notify, "days", "44"))
-            )
+            lines.append(format_message(template, notify, reason_text(notify, "days", "15")))
         self.preview_label.setText("\n".join(lines))
 
     def _probe_config(self) -> ConfigManager:
@@ -480,8 +505,10 @@ class ConfigDialog(QDialog):
         self.config.set("message_template", self.template_edit.text().strip() or DEFAULT_TEMPLATE)
         self.config.set("reminders_days", self._parse_days())
         self.config.set("imminent_minutes", self.imminent_spin.value())
+        self.config.set("notify_offset_days", self.notify_offset_spin.value())
         self.config.set("ignore_expired", self.ignore_expired_check.isChecked())
         self.config.set("expand_seconds", self.expand_spin.value())
+        self.config.set("collapse_after_hover_seconds", self.hover_spin.value())
         self.config.set("snooze_minutes", self.snooze_spin.value())
         self.config.set("repeat.enabled", self.repeat_check.isChecked())
         self.config.set("repeat.per_day", self.per_day_spin.value())
